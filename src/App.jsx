@@ -49,27 +49,28 @@ function App() {
       let resultatFinal = resultat;
 
       // Si le back n'a pas réussi à parser le JSON, on essaie nous-mêmes ici
-      if (resultat.reponse_brute) {
+      if (resultat && resultat.reponse_brute) {
         try {
           let texteNettoye = resultat.reponse_brute.trim();
           if (texteNettoye.startsWith("```")) {
-            texteNettoye = texteNettoye.split("```")[1];
-            if (texteNettoye.startsWith("json")) {
-              texteNettoye = texteNettoye.slice(4);
+            const parts = texteNettoye.split("```");
+            texteNettoye = parts[1] || "";
+            if (texteNettoye.trim().startsWith("json")) {
+              texteNettoye = texteNettoye.trim().slice(4);
             }
             texteNettoye = texteNettoye.trim();
           }
           resultatFinal = JSON.parse(texteNettoye);
         } catch (e) {
-          resultatFinal = resultat;
+          resultatFinal = null;
         }
       }
 
       let texteAffiche = `✅ Analyse de "${data.fichier}"\n\n`;
 
-      if (resultatFinal.erreur) {
+      if (resultatFinal && resultatFinal.erreur) {
         texteAffiche += `❌ ${resultatFinal.erreur}`;
-      } else if (resultatFinal.score_conformite !== undefined) {
+      } else if (resultatFinal && resultatFinal.score_conformite !== undefined) {
         const topPreuves = (resultatFinal.preuves_trouvees || []).slice(0, 3);
         const topManquants = (resultatFinal.elements_manquants || []).slice(0, 3);
         const nbPreuvesRestantes = (resultatFinal.preuves_trouvees || []).length - topPreuves.length;
@@ -85,8 +86,10 @@ function App() {
         texteAffiche += `\n\n⚠️ À améliorer :\n${topManquants.map(e => `  • ${e}`).join('\n')}`;
         if (nbManquantsRestants > 0) texteAffiche += `\n  ...et ${nbManquantsRestants} autre(s)`;
         texteAffiche += `\n\n💬 ${commentaireCourt}`;
+      } else if (resultat && resultat.reponse_brute) {
+        texteAffiche += resultat.reponse_brute;
       } else {
-        texteAffiche += "Réponse reçue mais format inattendu.";
+        texteAffiche += "Réponse reçue mais format inattendu.\n\n" + JSON.stringify(resultat);
       }
 
       setMessages((prev) => [...prev, {
